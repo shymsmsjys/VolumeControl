@@ -136,7 +136,7 @@ public class RoundKnobButton extends RelativeLayout implements OnGestureListener
 
 	public void setRotorPosAngle(float deg) {
 
-		if (deg >= 210 || deg <= 150) {
+		/*if (deg >= 210 || deg <= 150)*/ {
 			if (deg > 180) deg = deg - 360;
 			Log.d(TAG, "setRotorPosAngle() degree = " + deg);
 			float rotateDegree = deg - mAngleDown;
