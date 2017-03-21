@@ -4,12 +4,10 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
-import android.graphics.PointF;
 import android.util.Log;
 import android.view.GestureDetector;
 import android.view.GestureDetector.OnGestureListener;
 import android.view.MotionEvent;
-import android.view.View;
 import android.widget.ImageView;
 import android.widget.ImageView.ScaleType;
 import android.widget.RelativeLayout;
@@ -42,6 +40,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 ****************************************************************************/
 
 public class RoundKnobButton extends RelativeLayout implements OnGestureListener {
+	private static String TAG = "RoundKnobButton";
 
 	private GestureDetector 	gestureDetector;
 	private float 				mAngleDown , mAngleUp;
@@ -49,10 +48,12 @@ public class RoundKnobButton extends RelativeLayout implements OnGestureListener
 	private Bitmap 				bmpRotorOn , bmpRotorOff;
 	private boolean 			mState = false;
 	private int					m_nWidth = 0, m_nHeight = 0;
+	private float mTouchDeg;
+	private float mCurrentPostion;
 	
 	interface RoundKnobButtonListener {
-		public void onStateChange(boolean newstate) ;
-		public void onRotate(int percentage);
+		void onStateChange(boolean newstate) ;
+		void onRotate(int percentage);
 	}
 	
 	private RoundKnobButtonListener m_listener;
@@ -104,26 +105,19 @@ public class RoundKnobButton extends RelativeLayout implements OnGestureListener
 		gestureDetector = new GestureDetector(getContext(), this);
 	}
 	
-	/**
-	 * math..
-	 * @param x
-	 * @param y
-	 * @return
-	 */
 	private float cartesianToPolar(float x, float y) {
 		return (float) -Math.toDegrees(Math.atan2(x - 0.5f, y - 0.5f));
 	}
 
-	
 	@Override public boolean onTouchEvent(MotionEvent event) {
-		if (gestureDetector.onTouchEvent(event)) return true;
-		else return super.onTouchEvent(event);
+		return gestureDetector.onTouchEvent(event) || super.onTouchEvent(event);
 	}
 	
 	public boolean onDown(MotionEvent event) {
 		float x = event.getX() / ((float) getWidth());
 		float y = event.getY() / ((float) getHeight());
 		mAngleDown = cartesianToPolar(1 - x, 1 - y);// 1- to correct our custom axis direction
+		Log.d(TAG, "setRotorPosAngle() mAngleDown = " + mAngleDown);
 		return true;
 	}
 	
@@ -142,11 +136,21 @@ public class RoundKnobButton extends RelativeLayout implements OnGestureListener
 
 	public void setRotorPosAngle(float deg) {
 
-		/*if (deg >= 210 || deg <= 150)*/ {
+		if (deg >= 210 || deg <= 150) {
 			if (deg > 180) deg = deg - 360;
+			Log.d(TAG, "setRotorPosAngle() degree = " + deg);
+			float rotateDegree = deg - mAngleDown;
+			Log.i(TAG, "setRotorPosAngle() rotateDegree = " + rotateDegree);
 			Matrix matrix=new Matrix();
-			ivRotor.setScaleType(ScaleType.MATRIX);   
-			matrix.postRotate((float) deg, m_nWidth/2, m_nHeight/2);//getWidth()/2, getHeight()/2);
+			ivRotor.setScaleType(ScaleType.MATRIX);
+			mCurrentPostion += rotateDegree / 10;
+
+			if (mCurrentPostion > 180) mCurrentPostion = mCurrentPostion - 360;
+
+			matrix.postRotate(mCurrentPostion , m_nWidth/2, m_nHeight/2);//getWidth()/2, getHeight()/2);
+
+
+			Log.d(TAG, "setRotorPosAngle() mCurrentPostion = " + mCurrentPostion);
 			ivRotor.setImageMatrix(matrix);
 		}
 	}
@@ -154,6 +158,7 @@ public class RoundKnobButton extends RelativeLayout implements OnGestureListener
 	public void setRotorPercentage(int percentage) {
 		int posDegree = (int) (percentage * 3.6 - 180);
 		if (posDegree < 0) posDegree = 360 + posDegree;
+		mCurrentPostion = posDegree;
 		setRotorPosAngle(posDegree);
 	}
 	
@@ -173,7 +178,7 @@ public class RoundKnobButton extends RelativeLayout implements OnGestureListener
 				// rotate our imageview
 				setRotorPosAngle(posDegrees);
 				// get a linear scale
-				float scaleDegrees = rotDegrees + 180; // given the current parameters, we go from 0 to 300
+				float scaleDegrees = mCurrentPostion + 180; // given the current parameters, we go from 0 to 300
 				// get position percent
 				int percent = (int) (scaleDegrees / 3.6);
 				if (m_listener != null) m_listener.onRotate(percent);
